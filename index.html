@@ -136,7 +136,9 @@
 <!-- MAIN PANEL -->
 <div id="main">
     <textarea id="input" placeholder="Enter your prompt..."></textarea>
+    <div id="stats">No input yet.</div>
 
+    <textarea id="output" placeholder="Optimized result..."></textarea>
     <div style="margin-top: 10px;">
         <button onclick="optimizeLLM()">Optimize (LLM)</button>
         <button id="codeBtn" onclick="optimizeCode()">Optimize (Code)</button>
@@ -145,9 +147,6 @@
         <button id="helpBtn" onclick="openHelp()">Help</button>
     </div>
 
-    <div id="stats">No input yet.</div>
-
-    <textarea id="output" placeholder="Optimized result..."></textarea>
 </div>
 
 <!-- HELP MODAL -->
@@ -235,9 +234,7 @@ function optimizeCode() {
 function updateStats(original, finalVal) {
     const removed = original - finalVal;
     document.getElementById("stats").innerHTML = `
-        Original: <b>${original}</b> chars<br>
-        Removed: <b>${removed}</b><br>
-        Final: <b>${finalVal}</b> chars
+        Original: <b>${original}</b> chars | Removed: <b>${removed}</b> | Final: <b>${finalVal}</b> chars
     `;
 }
 
