@@ -76,4 +76,122 @@
     #stats {
         margin-top: 5px;
         font-size: 14px;
-        border: 1px s
+        border: 1px solid #30363d;
+        background: #161b22;
+        padding: 10px;
+        border-radius: 6px;
+    }
+
+    .btn-row {
+        margin-top: 15px;
+    }
+
+    button {
+        background: #238636;
+        color: white;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-right: 10px;
+        font-size: 14px;
+    }
+    button:hover {
+        background: #2ea043;
+    }
+</style>
+</head>
+
+<body>
+
+<!-- Sidebar History -->
+<div id="history">
+    <h2>History</h2>
+    <div id="history-list"></div>
+</div>
+
+<!-- Main UI -->
+<div id="main">
+    <h1>LLM Prompt Optimizer</h1>
+
+    <textarea id="input" placeholder="Enter your prompt here..."></textarea>
+
+    <div id="stats">
+        Original: 0 | Removed: 0 | Final: 0
+    </div>
+
+    <textarea id="output" readonly placeholder="Optimized prompt will appear here..."></textarea>
+
+    <div class="btn-row">
+        <button id="clear">Clear Input</button>
+        <button id="copy">Copy Result</button>
+    </div>
+</div>
+
+<script>
+    const inputArea = document.getElementById("input");
+    const outputArea = document.getElementById("output");
+    const stats = document.getElementById("stats");
+    const historyList = document.getElementById("history-list");
+    const clearBtn = document.getElementById("clear");
+    const copyBtn = document.getElementById("copy");
+
+    let sessionHistory = [];
+
+    function optimize(text) {
+        // Remove redundant whitespace, collapse multiple spaces/newlines
+        return text
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function updateStats(original, final) {
+        const removed = original - final;
+        stats.textContent = `Original: ${original} | Removed: ${removed} | Final: ${final}`;
+    }
+
+    function addToHistory(promptText) {
+        sessionHistory.unshift(promptText);
+
+        historyList.innerHTML = "";
+        sessionHistory.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "history-item";
+            div.textContent = item;
+            div.onclick = () => {
+                inputArea.value = item;
+                processInput();
+            };
+            historyList.appendChild(div);
+        });
+    }
+
+    function processInput() {
+        const original = inputArea.value;
+        const cleaned = optimize(original);
+
+        outputArea.value = cleaned;
+        updateStats(original.length, cleaned.length);
+    }
+
+    inputArea.addEventListener("input", processInput);
+
+    inputArea.addEventListener("change", () => {
+        if (inputArea.value.trim().length > 0) {
+            addToHistory(inputArea.value.trim());
+        }
+    });
+
+    clearBtn.onclick = () => {
+        inputArea.value = "";
+        outputArea.value = "";
+        updateStats(0, 0);
+    };
+
+    copyBtn.onclick = () => {
+        navigator.clipboard.writeText(outputArea.value);
+    };
+</script>
+
+</body>
+</html>
