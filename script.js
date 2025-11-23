@@ -13,6 +13,7 @@ let targets = [];
 let defcon = 5;
 let gameStarted = false;
 let defconInterval;
+let victorySecured = false;
 
 // DEFCON Levels
 const DEFCON_LEVELS = {
@@ -402,6 +403,17 @@ function setDefcon(level) {
         gameStarted = true;
         clearInterval(defconInterval);
         startBombardment();
+
+        // Show "COCKED PISTOL" for interval time (1s), then switch to "CALCULATIONS..."
+        setTimeout(() => {
+            if (!victorySecured) {
+                const footer = document.querySelector('footer p');
+                if (footer) {
+                    footer.innerText = "CALCULATIONS...";
+                    footer.style.color = "#ff0000";
+                }
+            }
+        }, 1000);
     }
 }
 
@@ -608,6 +620,7 @@ function checkVictory() {
     // 1. Only one faction has active units.
     // 2. At least 2 factions were involved in the war (prevents early victory when only 1 spawns).
     if (activeFactions.size === 1 && alertedCount >= 2) {
+        victorySecured = true;
         const winner = activeFactions.values().next().value;
         const footer = document.querySelector('footer p');
         if (footer) {
