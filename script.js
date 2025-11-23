@@ -85,7 +85,32 @@ function dist(p1, p2) {
     return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
 
-// Classes
+// Helper: Point in Polygon (Ray Casting)
+function isPointInPoly(point, vs) {
+    let x = point[0], y = point[1];
+    let inside = false;
+    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        let xi = vs[i][0], yi = vs[i][1];
+        let xj = vs[j][0], yj = vs[j][1];
+        let intersect = ((yi > y) != (yj > y)) &&
+            (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+function isOnLand(lon, lat) {
+    // Check all map features
+    for (const feature of mapData) {
+        if (feature.geometry.type === 'Polygon') {
+            if (feature.geometry.coordinates.some(ring => isPointInPoly([lon, lat], ring))) return true;
+        } else if (feature.geometry.type === 'MultiPolygon') {
+            if (feature.geometry.coordinates.some(poly => poly.some(ring => isPointInPoly([lon, lat], ring)))) return true;
+        }
+    }
+    return false;
+}
+
 class Unit {
     constructor(type, faction, lon, lat) {
         this.type = type;
@@ -108,6 +133,7 @@ class Unit {
         this.ammo = stats.ammo || 0;
         this.hangar = stats.hangar || 0;
         this.isAir = stats.type === 'AIR';
+        this.isNaval = (type === 'SUB' || type === 'CARRIER');
 
         this.cooldown = Math.random() * 100 + 50;
     }
@@ -137,8 +163,18 @@ class Unit {
                 this.patrol();
             }
         }
-        else if (this.type === 'SUB' && this.ammo <= 0) {
-            this.patrol();
+        else if (this.type === 'SUB') {
+            if (this.ammo <= 0) {
+                // Hunter-Killer Mode: Hunt Subs/Carriers
+                this.findTarget();
+                if (this.combatTarget) {
+                    this.moveTo(this.combatTarget.pos);
+                } else {
+                    this.patrol();
+                }
+            } else {
+                this.patrol();
+            }
         }
         else if (this.type === 'SILO') {
             // Static
@@ -159,8 +195,9 @@ class Unit {
                 this.launchMissile();
             }
 
-            // FIGHTER/CARRIER ATTACK
-            if ((this.type === 'FIGHTER' || this.type === 'CARRIER') && this.cooldown <= 0) {
+            // SUB/FIGHTER/CARRIER ATTACK (Lasers/Torpedos)
+            // Subs now attack when out of ammo OR if they have a target in range (Hunter Mode)
+            if ((this.type === 'FIGHTER' || this.type === 'CARRIER' || (this.type === 'SUB' && this.ammo <= 0)) && this.cooldown <= 0) {
                 this.findTarget();
                 if (this.combatTarget && dist(this.pos, this.combatTarget.pos) <= this.range) {
                     this.fireLaser();
@@ -185,22 +222,45 @@ class Unit {
         const dx = targetPos.x - this.pos.x;
         const dy = targetPos.y - this.pos.y;
         const d = Math.sqrt(dx * dx + dy * dy);
+
         if (d > 1) {
-            this.pos.x += (dx / d) * this.speed;
-            this.pos.y += (dy / d) * this.speed;
+            const nextX = this.pos.x + (dx / d) * this.speed;
+            const nextY = this.pos.y + (dy / d) * this.speed;
+
+            // Water Restriction for Naval Units
+            if (this.isNaval) {
+                const { lon, lat } = unproject(nextX, nextY);
+                if (isOnLand(lon, lat)) {
+                    // Hit land, stop or pick new target
+                    this.target = null;
+                    return;
+                }
+            }
+
+            this.pos.x = nextX;
+            this.pos.y = nextY;
         }
     }
 
     patrol() {
         if (!this.target && Math.random() > 0.99) {
-            this.target = {
-                x: this.pos.x + (Math.random() - 0.5) * 100,
-                y: this.pos.y + (Math.random() - 0.5) * 100
-            };
+            // Pick a random point
+            const randX = this.pos.x + (Math.random() - 0.5) * 100;
+            const randY = this.pos.y + (Math.random() - 0.5) * 100;
+
+            // If Naval, ensure target is in water
+            if (this.isNaval) {
+                const { lon, lat } = unproject(randX, randY);
+                if (!isOnLand(lon, lat)) {
+                    this.target = { x: randX, y: randY };
+                }
+            } else {
+                this.target = { x: randX, y: randY };
+            }
         }
         if (this.target) {
             this.moveTo(this.target);
-            if (dist(this.pos, this.target) < 2) this.target = null;
+            if (this.target && dist(this.pos, this.target) < 2) this.target = null;
         }
     }
 
@@ -418,10 +478,16 @@ function setDefcon(level) {
 }
 
 function startDefconCycle() {
-    setDefcon(5);
-    defconInterval = setInterval(() => {
-        const randomLevel = Math.floor(Math.random() * 5) + 1;
-        setDefcon(randomLevel);
+    let defconLevel = 5;
+    setDefcon(defconLevel);
+
+    const defconInterval = setInterval(() => {
+        if (defconLevel > 1) {
+            defconLevel -= 1; // Decrement level by 1
+        } else {
+            clearInterval(defconInterval); // Stop the interval when it reaches 1
+        }
+        setDefcon(defconLevel);
     }, 1000);
 }
 
@@ -464,10 +530,32 @@ function checkImpact(x, y, aggressor) {
 function spawnFactionUnits(faction) {
     const region = faction.spawnRegion;
     const spawn = (type, count) => {
+        const isNaval = (type === 'CARRIER' || type === 'SUB');
+        const isLand = (type === 'SILO');
+
         for (let i = 0; i < count; i++) {
-            const lon = region.lon[0] + Math.random() * (region.lon[1] - region.lon[0]);
-            const lat = region.lat[0] + Math.random() * (region.lat[1] - region.lat[0]);
-            units.push(new Unit(type, faction, lon, lat));
+            let lon, lat, valid = false;
+            let attempts = 0;
+            // Try to find a valid spot
+            while (!valid && attempts < 50) {
+                lon = region.lon[0] + Math.random() * (region.lon[1] - region.lon[0]);
+                lat = region.lat[0] + Math.random() * (region.lat[1] - region.lat[0]);
+
+                const onLand = isOnLand(lon, lat);
+
+                if (isNaval) {
+                    if (!onLand) valid = true; // Must be in water
+                } else if (isLand) {
+                    if (onLand) valid = true; // Must be on land
+                } else {
+                    valid = true; // Air units or others can be anywhere (though they spawn from carriers usually)
+                }
+                attempts++;
+            }
+
+            if (valid) {
+                units.push(new Unit(type, faction, lon, lat));
+            }
         }
     };
 
