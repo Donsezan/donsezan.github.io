@@ -1,0 +1,240 @@
+:root {
+    --bg-color: #050505;
+    --terminal-green: #0f0;
+    --alert-red: #ff3333;
+    --neon-blue: #00f3ff;
+    --amber: #ffb000;
+    --glass-bg: rgba(10, 20, 30, 0.6);
+    --border-color: rgba(0, 243, 255, 0.3);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--neon-blue);
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden; /* Prevent scrollbars from canvas */
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Background Map Canvas */
+#war-room {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    opacity: 0.6;
+}
+
+/* CRT Effects */
+.scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0,0,0,0.2) 50%,
+        rgba(0,0,0,0.2)
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.crt-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+    z-index: 11;
+    animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+    0% { opacity: 0.97; }
+    50% { opacity: 1; }
+    100% { opacity: 0.98; }
+}
+
+/* HUD Interface */
+.hud-container {
+    position: relative;
+    z-index: 5;
+    padding: 2rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none; /* Let clicks pass through to canvas if needed, but we need pointer-events auto on children */
+}
+
+.hud-container > * {
+    pointer-events: auto;
+}
+
+header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    text-shadow: 0 0 10px var(--neon-blue);
+}
+
+h1 {
+    font-size: 3rem;
+    letter-spacing: 5px;
+    margin-bottom: 0.5rem;
+}
+
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.2rem;
+    color: var(--amber);
+}
+
+.blink {
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    50% { opacity: 0; }
+}
+
+main {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    flex-grow: 1;
+}
+
+.panel {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    backdrop-filter: blur(2px);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.panel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(0, 243, 255, 0.2);
+    border-color: var(--neon-blue);
+}
+
+h2 {
+    color: var(--alert-red);
+    border-bottom: 1px dashed var(--alert-red);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+ul {
+    list-style: none;
+}
+
+li {
+    margin-bottom: 0.5rem;
+}
+
+a {
+    color: var(--neon-blue);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: #fff;
+    text-shadow: 0 0 5px #fff;
+}
+
+.status {
+    float: right;
+    font-size: 0.8em;
+    color: var(--terminal-green);
+}
+
+footer {
+    margin-top: auto;
+    text-align: center;
+    color: var(--alert-red);
+    font-size: 1.5rem;
+    letter-spacing: 3px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+/* Glitch Effect */
+.glitch {
+    position: relative;
+}
+
+.glitch::before,
+.glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-color);
+}
+
+.glitch::before {
+    left: 2px;
+    text-shadow: -1px 0 red;
+    clip: rect(24px, 550px, 90px, 0);
+    animation: glitch-anim-1 2.5s infinite linear alternate-reverse;
+}
+
+.glitch::after {
+    left: -2px;
+    text-shadow: -1px 0 blue;
+    clip: rect(85px, 550px, 140px, 0);
+    animation: glitch-anim-2 3s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim-1 {
+    0% { clip: rect(20px, 9999px, 15px, 0); }
+    20% { clip: rect(50px, 9999px, 60px, 0); }
+    40% { clip: rect(80px, 9999px, 25px, 0); }
+    60% { clip: rect(10px, 9999px, 85px, 0); }
+    80% { clip: rect(40px, 9999px, 50px, 0); }
+    100% { clip: rect(70px, 9999px, 95px, 0); }
+}
+
+@keyframes glitch-anim-2 {
+    0% { clip: rect(25px, 9999px, 90px, 0); }
+    20% { clip: rect(65px, 9999px, 20px, 0); }
+    40% { clip: rect(15px, 9999px, 75px, 0); }
+    60% { clip: rect(90px, 9999px, 10px, 0); }
+    80% { clip: rect(55px, 9999px, 45px, 0); }
+    100% { clip: rect(35px, 9999px, 80px, 0); }
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    h1 { font-size: 2rem; }
+    .status-bar { flex-direction: column; gap: 0.5rem; }
+    .panel { margin-bottom: 1rem; }
+}
